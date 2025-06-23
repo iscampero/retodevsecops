@@ -1,30 +1,29 @@
-pipeline {
-    agent any
-    environment {
-        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')  
-    }
-    stages {
-        stage('Clonar Repositorio') {
-            steps {
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/iscampero/retodevsecops.git'
-            }
-        }
-        stage('Ejecutar Pruebas') {
-            steps {
-                sh 'npm install'
-                sh 'npm test'
-            }
-        }
-        stage('Construir Imagen de Docker') {
-            steps {
-                sh 'docker build -t icampero/retodevsecops:latest .'
-            }
-        }
-        stage('Enviar a Docker Hub') {
-            steps {
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                sh 'docker push icampero/retodevsecops:latest'
-            }
-        }
-    }
-}
+name: Node.js CI/CD
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "14"
+      - name: Install dependencies
+        run: npm install
+      - name: Run tests
+        run: npm test
+      - name: Build Docker image
+        run: docker build -t iscampero/node-app:latest .
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push Docker image
+        run: docker push iscampero/node-app:latest
